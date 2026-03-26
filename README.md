@@ -1,5 +1,5 @@
-CbrPdfConverter
-===============
+CbrCbz2PdfConverter
+===================
 
 A simple application to convert .cbr/.cbz to pdf and .pdf to .cbz.
 
