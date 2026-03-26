@@ -1,0 +1,43 @@
+<svg width="256" height="256" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="shell" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#60AEFF"/>
+      <stop offset="100%" stop-color="#0067C0"/>
+    </linearGradient>
+    <linearGradient id="page" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E8F1FB"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#C2D8F5"/>
+      <stop offset="100%" stop-color="#8BBAE8"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#shell)"/>
+  <rect x="2" y="2" width="60" height="26" rx="14" fill="white" fill-opacity="0.12"/>
+  <rect x="2" y="15" width="60" height="13" fill="white" fill-opacity="0.04"/>
+
+  <path d="M10,16 L10,50 Q10,52 12,52 L28,52 Q30,52 30,50 L30,22 L24,16 Z" fill="url(#page)"/>
+  <path d="M24,16 L24,22 L30,22 Z" fill="url(#fold)"/>
+  <rect x="13" y="26" width="12" height="1.5" rx="0.75" fill="#B0C8E8"/>
+  <rect x="13" y="30" width="14" height="1.5" rx="0.75" fill="#B0C8E8"/>
+  <rect x="13" y="34" width="10" height="1.5" rx="0.75" fill="#B0C8E8"/>
+  <rect x="13" y="38" width="13" height="1.5" rx="0.75" fill="#B0C8E8"/>
+  <rect x="13" y="42" width="9"  height="1.5" rx="0.75" fill="#B0C8E8"/>
+  <rect x="11" y="45" width="17" height="5" rx="1.5" fill="#0067C0" fill-opacity="0.18"/>
+  <text x="19.5" y="48.8" text-anchor="middle" font-family="'Segoe UI',Arial,sans-serif" font-size="3.5" font-weight="700" fill="#0050A0" letter-spacing="0.3">CBZ</text>
+
+  <rect x="28.5" y="30.5" width="7" height="3" rx="1.5" fill="white"/>
+  <path d="M34,27.5 L38.5,32 L34,36.5 Z" fill="white"/>
+
+  <path d="M34,16 L34,50 Q34,52 36,52 L52,52 Q54,52 54,50 L54,22 L48,16 Z" fill="url(#page)"/>
+  <path d="M48,16 L48,22 L54,22 Z" fill="url(#fold)"/>
+  <rect x="37" y="26" width="12" height="1.5" rx="0.75" fill="#B0C8E8"/>
+  <rect x="37" y="30" width="14" height="1.5" rx="0.75" fill="#B0C8E8"/>
+  <rect x="37" y="34" width="10" height="1.5" rx="0.75" fill="#B0C8E8"/>
+  <rect x="37" y="38" width="13" height="1.5" rx="0.75" fill="#B0C8E8"/>
+  <rect x="37" y="42" width="9"  height="1.5" rx="0.75" fill="#B0C8E8"/>
+  <rect x="35" y="45" width="17" height="5" rx="1.5" fill="#C42B1C" fill-opacity="0.18"/>
+  <text x="43.5" y="48.8" text-anchor="middle" font-family="'Segoe UI',Arial,sans-serif" font-size="3.5" font-weight="700" fill="#A52015" letter-spacing="0.3">PDF</text>
+</svg>

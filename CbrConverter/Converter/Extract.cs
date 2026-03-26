@@ -2,6 +2,7 @@
 using System.Linq;
 using System.IO;
 using System.Threading;
+using System.Collections.Generic;
 
 using System.Drawing.Imaging;
 using System.Drawing;
@@ -26,19 +27,18 @@ namespace CbrConverter
         public EventArgs e = null;
         double CurOneStep;
         bool IsSingleFile; //to link the 2 progress bar
-        bool _Cbr2Pdf, _Pdf2Cbz, _ReduceSize, _JoinImages, _CheckImagesPages;
+        bool _Cbr2Pdf, _ReduceSize, _JoinImages, _CheckImagesPages;
 
 
         /// <summary>
         /// Start the extraction thread according to selected file or folder
         /// </summary>
-        public void BeginExtraction(bool cbr2pdf, bool pdf2cbz, bool reduceSize, bool deleteOriginal, bool joinImages, bool checkImagesPages)
+        public void BeginExtraction(bool cbr2pdf, bool reduceSize, bool deleteOriginal, bool joinImages, bool checkImagesPages)
         {
             _Cbr2Pdf = cbr2pdf;
             _JoinImages = joinImages;
             _CheckImagesPages = checkImagesPages;
             _ReduceSize = reduceSize;
-            _Pdf2Cbz = pdf2cbz;
 
             //checking if is a directory or a file
             if (File.Exists(DataAccess.Instance.g_WorkingDir))
@@ -54,34 +54,12 @@ namespace CbrConverter
                     Thread extract = new Thread(ConvertCbrToPdf);
                     extract.Start();
                 }
-                else if ((string.Compare(ext, ".pdf") == 0) && (_Pdf2Cbz))
+                else
                 {
-                    int nbFichiers = 1;
-                    //calculate the value for the progression bar
-                    double singval = (double)100 / nbFichiers;
-
-                    var bw = new BackgroundWorker();
-
-                    // define the event handlers
-                    bw.DoWork += (sender, args) =>
-                    {
-                        // do your lengthy stuff here -- this will happen in a separate thread
-                        ExtractMultipleFiles(DataAccess.Instance.g_WorkingDir, singval);
-                    };
-
-                    bw.RunWorkerCompleted += (sender, args) =>
-                    {
-                        //finished, update the ui
-                        DataAccess.Instance.g_Processing = false;
-                        DataAccess.Instance.g_totProgress = 0;
-                        DataAccess.Instance.g_curProgress = 0;
-                        DataAccess.Instance.g_WorkingFile = string.Empty;
-                        evnt_UpdateFileName(this, e);
-                        evnt_UpdatTotBar(this, e);
-                        evnt_UpdateCurBar();
-                    };
-
-                    bw.RunWorkerAsync(); // starts the background worker
+                    DataAccess.Instance.g_Processing = false;
+                    DataAccess.Instance.g_WorkingFile = string.Empty;
+                    evnt_UpdateFileName(this, e);
+                    evnt_ErrorNotify(this, "Type de fichier non supporte pour la conversion vers PDF.");
                 }
 
             }
@@ -150,43 +128,80 @@ namespace CbrConverter
                 Directory.CreateDirectory(temporaryDir);
 
 
-                //inizio test
-                var archive = ArchiveFactory.Open(DataAccess.Instance.g_WorkingFile);
-                //calculating file for pregress bar
-                double CurOneStep = archive.Entries.Count();
+                string archiveExt = Path.GetExtension(DataAccess.Instance.g_WorkingFile).ToLower();
+
                 int divider;
                 if (_ReduceSize)
                     divider = 33;
                 else
                     divider = 50;
-                CurOneStep = divider / CurOneStep;
 
-                var options = new ExtractionOptions
+                if (archiveExt == ".zip" || archiveExt == ".cbz")
                 {
-                    Overwrite = true,
-                    PreserveAttributes = false,
-                    PreserveFileTime = true
-                };
-
-                //extract the file into the folder
-                foreach (var entry in archive.Entries)
-                {
-                    if (!entry.IsDirectory)
+                    using (var zip = ZipFile.Read(DataAccess.Instance.g_WorkingFile))
                     {
-                        if (DataAccess.Instance.g_Processing) //this is to stop the thread if stop button is pressed
+                        int entryCount = zip.Entries.Count(x => !x.IsDirectory);
+                        CurOneStep = divider / (double)Math.Max(entryCount, 1);
+
+                        foreach (var entry in zip.Entries)
                         {
-
-                            string path = Path.Combine(temporaryDir, Path.GetFileName(entry.Key));
-                            //entry.WriteToDirectory(@"C:\temp", ExtractOptions.ExtractFullPath | ExtractOptions.Overwrite);
-                            entry.WriteToFile(path, options);
-
-                            DataAccess.Instance.g_curProgress += CurOneStep;
-                            evnt_UpdateCurBar();
-
-                            if (IsSingleFile)
+                            if (!entry.IsDirectory)
                             {
-                                DataAccess.Instance.g_totProgress = DataAccess.Instance.g_curProgress;
-                                evnt_UpdatTotBar(this, e);
+                                if (DataAccess.Instance.g_Processing) //this is to stop the thread if stop button is pressed
+                                {
+                                    string path = Path.Combine(temporaryDir, Path.GetFileName(entry.FileName));
+                                    using (var ms = new MemoryStream())
+                                    {
+                                        entry.Extract(ms);
+                                        File.WriteAllBytes(path, ms.ToArray());
+                                    }
+
+                                    DataAccess.Instance.g_curProgress += CurOneStep;
+                                    evnt_UpdateCurBar();
+
+                                    if (IsSingleFile)
+                                    {
+                                        DataAccess.Instance.g_totProgress = DataAccess.Instance.g_curProgress;
+                                        evnt_UpdatTotBar(this, e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    var archive = ArchiveFactory.Open(DataAccess.Instance.g_WorkingFile);
+                    int entryCount = archive.Entries.Count(x => !x.IsDirectory);
+                    CurOneStep = divider / (double)Math.Max(entryCount, 1);
+
+                    var options = new ExtractionOptions
+                    {
+                        Overwrite = true,
+                        PreserveAttributes = false,
+                        PreserveFileTime = true
+                    };
+
+                    //extract the file into the folder
+                    foreach (var entry in archive.Entries)
+                    {
+                        if (!entry.IsDirectory)
+                        {
+                            if (DataAccess.Instance.g_Processing) //this is to stop the thread if stop button is pressed
+                            {
+
+                                string path = Path.Combine(temporaryDir, Path.GetFileName(entry.Key));
+                                //entry.WriteToDirectory(@"C:\temp", ExtractOptions.ExtractFullPath | ExtractOptions.Overwrite);
+                                entry.WriteToFile(path, options);
+
+                                DataAccess.Instance.g_curProgress += CurOneStep;
+                                evnt_UpdateCurBar();
+
+                                if (IsSingleFile)
+                                {
+                                    DataAccess.Instance.g_totProgress = DataAccess.Instance.g_curProgress;
+                                    evnt_UpdatTotBar(this, e);
+                                }
                             }
                         }
                     }
@@ -305,8 +320,21 @@ namespace CbrConverter
 
         private int CountFiles(string dir)
         {
-            string[] files = Directory.GetFiles(dir, "*.pdf", SearchOption.AllDirectories);
-            return files.Length;
+            int total = 0;
+
+            if (_Cbr2Pdf)
+            {
+                total += Directory.GetFiles(dir, "*", SearchOption.AllDirectories)
+                    .Count(file => IsSupportedArchiveExtension(Path.GetExtension(file)));
+
+                if (ContainsSupportedImages(dir))
+                    total += 1;
+
+                total += Directory.GetDirectories(dir, "*", SearchOption.AllDirectories)
+                    .Count(ContainsSupportedImages);
+            }
+
+            return Math.Max(total, 1);
         }
 
         /// <summary>
@@ -318,6 +346,21 @@ namespace CbrConverter
 
             if ((File.GetAttributes(currentDir) & FileAttributes.Directory) == FileAttributes.Directory)
             {
+                if (_Cbr2Pdf && ContainsSupportedImages(currentDir))
+                {
+                    DataAccess.Instance.g_WorkingFile = currentDir;
+                    try
+                    {
+                        ConvertImageFolderToPdf(currentDir);
+                        DataAccess.Instance.g_totProgress += singval;
+                        evnt_UpdatTotBar(this, e);
+                    }
+                    catch (Exception a)
+                    {
+                        evnt_ErrorNotify(this, currentDir + " : " + a.Message.ToString());
+                    }
+                }
+
                 files = Directory.GetFiles(currentDir);
                 string[] directories = Directory.GetDirectories(currentDir);
                 //int count = files.Count();
@@ -337,13 +380,9 @@ namespace CbrConverter
                     try
                     {
                         string ext = Path.GetExtension(DataAccess.Instance.g_WorkingFile).ToLower();
-                        if (((string.Compare(ext, ".cbr") == 0) || (string.Compare(ext, ".rar") == 0) || (string.Compare(ext, ".cbz") == 0) || (string.Compare(ext, ".zip") == 0)) && (_Cbr2Pdf))
+                        if (IsSupportedArchiveExtension(ext) && (_Cbr2Pdf))
                         {
                             ConvertCbrToPdf();
-                        }
-                        else if ((string.Compare(ext, ".pdf") == 0)  && (_Pdf2Cbz))
-                        {
-                            ConvertPdfToCbr(file);
                         }
 
                         //updating the total progression bar
@@ -355,6 +394,79 @@ namespace CbrConverter
                         evnt_ErrorNotify(this, file + " : " + a.Message.ToString());
                     }
                 }
+            }
+        }
+
+        private static bool IsSupportedArchiveExtension(string ext)
+        {
+            string normalizedExt = (ext ?? string.Empty).ToLower();
+            return (normalizedExt == ".cbr") || (normalizedExt == ".cbz") || (normalizedExt == ".rar") || (normalizedExt == ".zip");
+        }
+
+        private static bool IsSupportedImageExtension(string ext)
+        {
+            string normalizedExt = (ext ?? string.Empty).ToLower();
+            return (normalizedExt == ".jpg") || (normalizedExt == ".jpeg") || (normalizedExt == ".png") || (normalizedExt == ".bmp") || (normalizedExt == ".tif") || (normalizedExt == ".tiff");
+        }
+
+        private static bool ContainsSupportedImages(string dir)
+        {
+            try
+            {
+                return Directory.GetFiles(dir)
+                    .Any(file => IsSupportedImageExtension(Path.GetExtension(file)));
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void ConvertImageFolderToPdf(string imageDir)
+        {
+            evnt_UpdateFileName(this, e);
+
+            var imageFiles = Directory.GetFiles(imageDir)
+                .Where(file => IsSupportedImageExtension(Path.GetExtension(file)))
+                .OrderBy(file => file)
+                .ToList();
+
+            if (!imageFiles.Any())
+                return;
+
+            string outputFile = Path.Combine(DataAccess.Instance.g_Output_dir, Path.GetFileName(imageDir) + ".pdf");
+            temporaryDir = Path.Combine(Path.GetTempPath(), "CbrConverter", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(temporaryDir);
+
+            try
+            {
+                foreach (var imageFile in imageFiles)
+                {
+                    var targetPath = Path.Combine(temporaryDir, Path.GetFileName(imageFile));
+                    File.Copy(imageFile, targetPath, true);
+                }
+
+                if (DataAccess.Instance.g_Processing)
+                {
+                    if (DataAccess.Instance.g_ReduceSize)
+                        CompressImage();
+
+                    GeneratePdf();
+
+                    string generatedPdf = temporaryDir + ".pdf";
+                    if (File.Exists(outputFile))
+                        File.Delete(outputFile);
+
+                    File.Move(generatedPdf, outputFile);
+                }
+            }
+            finally
+            {
+                if (Directory.Exists(temporaryDir))
+                    Directory.Delete(temporaryDir, true);
+
+                DataAccess.Instance.g_curProgress = 0;
+                evnt_UpdateCurBar();
             }
         }
 
@@ -457,7 +569,7 @@ namespace CbrConverter
                     string ext = Path.GetExtension(imageFile);
                     if ((string.Compare(ext, ".jpg") != 0) && (string.Compare(ext, ".jpeg") != 0) && (string.Compare(ext, ".bmp") != 0)
                         && (string.Compare(ext, ".JPG") != 0) && (string.Compare(ext, ".JPEG") != 0) && (string.Compare(ext, ".BMP") != 0))
-                        break;
+                        continue;
 
                     //compressing
                     using (Image OldImg = Image.FromFile(imageFile))
