@@ -165,7 +165,7 @@
   <ItemGroup>
     <Content Include="Resources\arrow_double_down.png" />
     <Content Include="Resources\arrow_double_up.png" />
-    <Content Include="Resources\Icons\app.ico" />
+    <Resource Include="Resources\Icons\app.ico" />
     <Content Include="Resources\Icons\logo.svg" />
   </ItemGroup>
   <ItemGroup>
