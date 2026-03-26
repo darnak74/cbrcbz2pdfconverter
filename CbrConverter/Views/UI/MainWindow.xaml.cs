@@ -18,7 +18,6 @@ namespace CbrConverter
         {
             InitializeComponent();
             TxtDest.Text = "Identique à la source";
-            ChkRecursive.IsEnabled = false;
             SetStatus("Prêt", "#107C10");
         }
 
