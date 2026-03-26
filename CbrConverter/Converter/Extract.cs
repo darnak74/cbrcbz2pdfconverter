@@ -71,8 +71,6 @@ namespace CbrConverter
                 //calculate the value for the progression bar
                 double singval = (double)100 / nbFichiers;
 
-                //Thread ext = new Thread(() => ExtractMultipleFiles(DataAccess.Instance.g_WorkingDir, singval));
-                //ext.Start();
                 var bw = new BackgroundWorker();
 
                 // define the event handlers
@@ -105,11 +103,6 @@ namespace CbrConverter
         {
             try
             {
-                //check if cbr
-                /*string ext = Path.GetExtension(DataAccess.Instance.g_WorkingFile);
-                if ((string.Compare(ext, ".cbr") != 0)&&(string.Compare(ext, ".cbz") != 0))
-                    return;*/
-
                 //write the name of the file on the UI
                 evnt_UpdateFileName(this, e);
 
@@ -191,7 +184,6 @@ namespace CbrConverter
                             {
 
                                 string path = Path.Combine(temporaryDir, Path.GetFileName(entry.Key));
-                                //entry.WriteToDirectory(@"C:\temp", ExtractOptions.ExtractFullPath | ExtractOptions.Overwrite);
                                 entry.WriteToFile(path, options);
 
                                 DataAccess.Instance.g_curProgress += CurOneStep;
@@ -290,16 +282,8 @@ namespace CbrConverter
                 using (ZipFile zip = new ZipFile())
                 {
                     zip.AddDirectory(temporaryDir);
-                    // zip.Comment = "This zip was created at " + System.DateTime.Now.ToString("G");
                     zip.Save(savedfile);
                 }
-
-                //waiting the new sharpcompress release to fix it
-                /*  using (var archive = ZipArchive.Create())
-                  {
-                      archive.AddAllFromDirectory(temporaryDir);                       
-                      archive.SaveTo(savedfile, CompressionType.None);    
-                  }*/
             }
 
 
@@ -621,9 +605,7 @@ namespace CbrConverter
             using (MemoryStream ms = new MemoryStream())
             {
                 img.Save(ms, jpegCodec, encoderParams);
-                ms.ToArray();
                 File.WriteAllBytes(path, ms.ToArray());
-                //img.Save(path, jpegCodec, encoderParams);
             }
         }
 
